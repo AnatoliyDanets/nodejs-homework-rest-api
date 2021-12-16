@@ -77,9 +77,4 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
-  const { id } = req.params;
-  const contact = await contacts.updateContact(id, req.body);
-  res.json(contact);
-});
 module.exports = router;
