@@ -1,18 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { schema } = require('../../model/contact');
 const contacts = require('../../model/');
-const Joi = require('joi');
 
-const schema = Joi.object({
-  name: Joi.string().min(3).max(30).required(),
-  email: Joi.string()
-    .email({
-      minDomainSegments: 2,
-      tlds: { allow: ['com', 'net', 'uk', 'org', 'ua', 'ru'] },
-    })
-    .required(),
-  phone: Joi.string().required(),
-});
 router.get('/', async (req, res, next) => {
   try {
     res.status(200).json(await contacts.listContacts());
@@ -40,8 +30,7 @@ router.post('/', async (req, res, next) => {
     if (error) {
       return res.status(400).json({ message: 'missing required name field' });
     }
-    const newContact = await contacts.addContact(req.body);
-    res.status(201).json(newContact);
+    res.status(201).json(await contacts.addContact(req.body));
   } catch (error) {
     next(error);
   }
@@ -67,7 +56,33 @@ router.put('/:id', async (req, res, next) => {
       return res.status(400).json({ message: 'missing fields' });
     }
     const { id } = req.params;
-    const contact = await contacts.updateContact(id, req.body);
+    const contact = await contacts.updateContact(id, req.body, {
+      new: true,
+    });
+    if (!contact) {
+      return res.status(404).json({ message: 'Not found' });
+    }
+    res.json(contact);
+  } catch (error) {
+    next(error);
+  }
+});
+router.patch('/:id/favorite', async (req, res, next) => {
+  try {
+    const { favorite } = req.body;
+    if (!req.body.hasOwnProperty('favorite')) {
+      return res.status(400).json({ message: 'missing field favorite' });
+    }
+    const { id } = req.params;
+
+    const contact = await contacts.updateStatusContact(
+      id,
+      { favorite },
+      {
+        new: true,
+      },
+    );
+
     if (!contact) {
       return res.status(404).json({ message: 'Not found' });
     }
