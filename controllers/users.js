@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../model');
 const { joiRegisterSchema, joiLoginSchema } = require('../model/user');
+const gravatar = require('gravatar');
+const fs = require('fs/promises');
+const path = require('path');
+
+const avatarsDir = path.join(__dirname, '../', 'public', 'avatars');
 
 const { SECRET_KEY } = process.env;
 
@@ -20,7 +25,12 @@ const signup = async (req, res, next) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
-    const newUser = await User.create({ email, password: hashPassword });
+    const avatarURL = gravatar.url(email);
+    const newUser = await User.create({
+      email,
+      password: hashPassword,
+      avatarURL,
+    });
     res.status(201).json({
       user: {
         email: newUser.email,
@@ -103,4 +113,27 @@ const updateSubscription = async (req, res, next) => {
     next(error);
   }
 };
-module.exports = { signup, login, logout, currentUser, updateSubscription };
+const updateAvatar = async (req, res, next) => {
+  try {
+    const uniqName = req.user.email.split('@mail.').splice(0, 1).join('');
+    const { path: tempUpload, filename } = req.file;
+    const [extension] = filename.split('.').reverse();
+    const newFileName = `${uniqName}.${extension}`;
+    const fileUpload = path.join(avatarsDir, newFileName);
+    await fs.rename(tempUpload, fileUpload);
+    const avatarURL = path.join('avatars', newFileName);
+    await User.findByIdAndUpdate(req.user._id, { avatarURL }, { new: true });
+    res.json({ avatarURL });
+  } catch (error) {
+    await fs.unlink(req.file.path);
+    next(error);
+  }
+};
+module.exports = {
+  signup,
+  login,
+  logout,
+  currentUser,
+  updateSubscription,
+  updateAvatar,
+};
