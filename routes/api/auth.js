@@ -22,5 +22,7 @@ router.patch(
   resizeImg,
   users.updateAvatar,
 );
+router.post('/verify', users.emailResendVerification);
+router.get('/verify/:verificationToken', users.emailVerification);
 
 module.exports = router;
